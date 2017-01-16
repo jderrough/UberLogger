@@ -193,7 +193,7 @@ namespace UberLogger
 
         static List<ILogger> Loggers = new List<ILogger>();
         static LinkedList<LogInfo> RecentMessages = new LinkedList<LogInfo>();
-        static long StartTick;
+        static double StartTime;
         static bool AlreadyLogging = false;
         static Regex UnityMessageRegex;
 
@@ -201,11 +201,12 @@ namespace UberLogger
         {
             // Register with Unity's logging system
 #if UNITY_5
-            Application.logMessageReceived += UnityLogHandler;
+            UberDebug.UnityLog("Register");
+            Application.logMessageReceivedThreaded += UnityLogHandler;
 #else
             Application.RegisterLogCallback(UnityLogHandler);
 #endif
-            StartTick = DateTime.Now.Ticks;
+            StartTime = GetTime();
             UnityMessageRegex = new Regex(@"(.*)\((\d+).*\)");
         }
 
@@ -220,8 +221,15 @@ namespace UberLogger
     
         static public double GetTime()
         {
-            long ticks = DateTime.Now.Ticks;
-            return TimeSpan.FromTicks(ticks - StartTick).TotalSeconds;
+#if UNITY_EDITOR
+            // return EditorApplication.timeSinceStartup - StartTime;
+            // return DateTime.Now.Ticks - StartTime;
+            double time = DateTime.Now.Ticks/10000000.0;
+            return time - StartTime;
+#else
+            double time = Time.time;
+            return time - StartTime;
+#endif
         }
 
         /// <summary>
@@ -375,7 +383,6 @@ namespace UberLogger
                         {
                             case UnityEngine.LogType.Error: severity = LogSeverity.Error; break;
                             case UnityEngine.LogType.Exception: severity = LogSeverity.Error; break;
-                            case UnityEngine.LogType.Assert: severity = LogSeverity.Error; break;
                             case UnityEngine.LogType.Warning: severity = LogSeverity.Warning; break;
                             default: severity = LogSeverity.Message; break;
                         }
